@@ -32,11 +32,11 @@ function signingKey() {
   return new TextEncoder().encode(secret)
 }
 
-export type SessionPayload = { userId: string }
+export type SessionPayload = { email: string }
 
-export async function createSession(userId: string) {
+export async function createSession(email: string) {
   const expiresAt = new Date(Date.now() + MAX_AGE_MS)
-  const token = await new SignJWT({ userId })
+  const token = await new SignJWT({ email })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(expiresAt)
@@ -65,7 +65,7 @@ export async function getSession(): Promise<SessionPayload | null> {
     const { payload } = await jwtVerify<SessionPayload>(token, signingKey(), {
       algorithms: ['HS256'],
     })
-    return { userId: payload.userId }
+    return { email: payload.email }
   } catch {
     return null
   }

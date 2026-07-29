@@ -2,22 +2,22 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
+import { getPublishedPost, getPublishedPosts } from '@/lib/posts'
+import { siteConfig } from '@/lib/site'
 import { formatDate } from '@/lib/format'
 import { PostContent } from '@/components/post-content'
 
 type Props = { params: Promise<{ slug: string }> }
 
-async function getPost(slug: string) {
-  return prisma.post.findFirst({
-    where: { slug, published: true },
-    include: { author: { select: { name: true } } },
-  })
+/** Content is known at build time, so every post page can be prerendered. */
+export async function generateStaticParams() {
+  const posts = await getPublishedPosts()
+  return posts.map((post) => ({ slug: post.slug }))
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const post = await getPost(slug)
+  const post = await getPublishedPost(slug)
   if (!post) return {}
 
   return {
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PostPage({ params }: Props) {
   const { slug } = await params
-  const post = await getPost(slug)
+  const post = await getPublishedPost(slug)
 
   if (!post) notFound()
 
@@ -47,7 +47,7 @@ export default async function PostPage({ params }: Props) {
       <header className="mt-8 mb-8">
         <h1 className="text-3xl font-semibold tracking-tight">{post.title}</h1>
         <p className="mt-2 text-sm text-muted">
-          {formatDate(post.publishedAt)} · {post.author.name}
+          {formatDate(post.publishedAt)} · {siteConfig.author}
         </p>
       </header>
 

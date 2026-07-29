@@ -40,15 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-/src/generated/prisma
-
-# sqlite
-*.db
-*.db-journal
-
-# Uploaded images (keep the folder, ignore the contents)
-/public/uploads/*
-!/public/uploads/.gitkeep
+# Uploaded images are committed on purpose: posts reference them by path and there is
+# no object storage, so they have to ship with the repo for the deployed site to
+# render them. Add images through the admin panel locally, then commit them.
 
 # Prisma vendors AI-assistant skill docs on init; regenerated, not source
 /.agents/

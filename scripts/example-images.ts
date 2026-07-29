@@ -3,15 +3,11 @@ import path from 'node:path'
 import sharp from 'sharp'
 
 /**
- * The example post needs real image files, but `public/uploads/` is gitignored,
- * so the seed regenerates them instead of committing binaries. Filenames are
- * fixed (rather than the UUIDs a real upload gets) so re-seeding overwrites
- * them rather than piling up copies.
+ * Regenerates the two illustrations used by the "Writing with pictures" post. The images
+ * are committed, so this only needs running if they are deleted or you want to restyle
+ * them. Run with `npm run images:examples`.
  */
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
-
-export const EXAMPLE_COVER = '/uploads/example-cover.jpg'
-export const EXAMPLE_INLINE = '/uploads/example-desk.jpg'
 
 // Warm, muted tones picked to sit alongside the site's --accent (#8a5a2b).
 function coverSvg() {
@@ -78,8 +74,14 @@ async function render(svg: string, filename: string) {
   await writeFile(path.join(UPLOAD_DIR, filename), buffer)
 }
 
-export async function writeExampleImages() {
+async function main() {
   await mkdir(UPLOAD_DIR, { recursive: true })
   await render(coverSvg(), 'example-cover.jpg')
   await render(inlineSvg(), 'example-desk.jpg')
+  console.log('Wrote public/uploads/example-cover.jpg and example-desk.jpg')
 }
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error)
+  process.exit(1)
+})

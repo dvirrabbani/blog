@@ -47,30 +47,12 @@ export function sniffImageType(bytes: Uint8Array) {
 }
 
 /**
- * Serverless hosts have a read-only filesystem, so uploads go to blob storage
- * there and to `public/uploads/` locally. The choice is made by the presence of
- * the blob token rather than NODE_ENV, so a production build still works on a
- * normal server with a writable disk.
+ * Images are committed to `public/uploads/` alongside the posts that reference them, so
+ * the site needs no object storage. That only works where the filesystem is writable —
+ * uploading is therefore a local-authoring step, same as editing the JSON store.
  */
-export function usingBlobStorage() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN)
-}
-
-export async function saveUpload(bytes: Uint8Array, ext: string, mime: string) {
+export async function saveUpload(bytes: Uint8Array, ext: string) {
   const filename = `${randomUUID()}.${ext}`
-
-  if (usingBlobStorage()) {
-    // Imported lazily so local installs never load the SDK.
-    const { put } = await import('@vercel/blob')
-    const { url } = await put(`uploads/${filename}`, Buffer.from(bytes), {
-      access: 'public',
-      contentType: mime,
-      // Our filename is already a UUID; a second random suffix would only make
-      // the URL longer and break the delete-by-URL path.
-      addRandomSuffix: false,
-    })
-    return url
-  }
 
   await mkdir(UPLOAD_DIR, { recursive: true })
   await writeFile(path.join(UPLOAD_DIR, filename), bytes)

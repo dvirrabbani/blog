@@ -2,9 +2,16 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
 import { requireUser } from '@/lib/dal'
 import { isAllowedImageUrl } from '@/lib/image-url'
+import {
+  canEditContent,
+  deletePostBySlug,
+  getPost,
+  savePost,
+  uniqueSlug,
+  type Post,
+} from '@/lib/posts'
 
 export type PostFormState = { error?: string } | undefined
 
@@ -20,7 +27,9 @@ function slugify(value: string) {
 function readForm(formData: FormData) {
   const title = String(formData.get('title') ?? '').trim()
   // Browsers normalize textarea line breaks to CRLF on submit
-  const content = String(formData.get('content') ?? '').replace(/\r\n/g, '\n').trim()
+  const content = String(formData.get('content') ?? '')
+    .replace(/\r\n/g, '\n')
+    .trim()
   const excerpt = String(formData.get('excerpt') ?? '').trim()
   const published = formData.get('published') === 'on'
   const slug = slugify(String(formData.get('slug') ?? '') || title)
@@ -31,85 +40,85 @@ function readForm(formData: FormData) {
   return { title, content, excerpt, published, slug, coverImage }
 }
 
-async function uniqueSlug(slug: string, excludeId?: string) {
-  let candidate = slug
-  let n = 2
-  while (true) {
-    const existing = await prisma.post.findUnique({ where: { slug: candidate } })
-    if (!existing || existing.id === excludeId) return candidate
-    candidate = `${slug}-${n++}`
-  }
+const READ_ONLY =
+  'Content is read-only here. Edit content/posts.json locally, commit it, and redeploy.'
+
+function revalidateAll(slug: string) {
+  revalidatePath('/')
+  revalidatePath('/admin')
+  revalidatePath(`/posts/${slug}`)
 }
 
 export async function createPost(
   _state: PostFormState,
   formData: FormData,
 ): Promise<PostFormState> {
-  const user = await requireUser()
+  await requireUser()
+  if (!(await canEditContent())) return { error: READ_ONLY }
+
   const { title, content, excerpt, published, slug, coverImage } = readForm(formData)
 
   if (!title || !content) {
     return { error: 'Title and content are required.' }
   }
 
-  await prisma.post.create({
-    data: {
-      title,
-      content,
-      excerpt: excerpt || content.slice(0, 160),
-      coverImage,
-      slug: await uniqueSlug(slug || 'post'),
-      published,
-      publishedAt: published ? new Date() : null,
-      authorId: user.id,
-    },
-  })
+  const post: Post = {
+    slug: await uniqueSlug(slug || 'post'),
+    title,
+    excerpt: excerpt || content.slice(0, 160),
+    content,
+    coverImage,
+    published,
+    publishedAt: published ? new Date().toISOString() : null,
+  }
 
-  revalidatePath('/')
-  revalidatePath('/admin')
+  await savePost(post)
+
+  revalidateAll(post.slug)
   redirect('/admin')
 }
 
 export async function updatePost(
-  id: string,
+  currentSlug: string,
   _state: PostFormState,
   formData: FormData,
 ): Promise<PostFormState> {
   await requireUser()
+  if (!(await canEditContent())) return { error: READ_ONLY }
+
   const { title, content, excerpt, published, slug, coverImage } = readForm(formData)
 
   if (!title || !content) {
     return { error: 'Title and content are required.' }
   }
 
-  const existing = await prisma.post.findUnique({ where: { id } })
+  const existing = await getPost(currentSlug)
   if (!existing) return { error: 'Post not found.' }
 
-  await prisma.post.update({
-    where: { id },
-    data: {
-      title,
-      content,
-      excerpt: excerpt || content.slice(0, 160),
-      coverImage,
-      slug: await uniqueSlug(slug || 'post', id),
-      published,
-      publishedAt: published ? (existing.publishedAt ?? new Date()) : null,
-    },
-  })
+  const post: Post = {
+    slug: await uniqueSlug(slug || 'post', currentSlug),
+    title,
+    excerpt: excerpt || content.slice(0, 160),
+    content,
+    coverImage,
+    published,
+    // Keep the original date so editing a published post does not move it to the top.
+    publishedAt: published ? (existing.publishedAt ?? new Date().toISOString()) : null,
+  }
 
-  revalidatePath('/')
-  revalidatePath('/admin')
-  revalidatePath(`/posts/${existing.slug}`)
+  await savePost(post, currentSlug)
+
+  revalidateAll(existing.slug)
+  if (post.slug !== existing.slug) revalidatePath(`/posts/${post.slug}`)
   redirect('/admin')
 }
 
 export async function deletePost(formData: FormData) {
   await requireUser()
-  const id = String(formData.get('id') ?? '')
+  if (!(await canEditContent())) return
 
-  await prisma.post.delete({ where: { id } })
+  const slug = String(formData.get('slug') ?? '')
+  await deletePostBySlug(slug)
 
-  revalidatePath('/')
-  revalidatePath('/admin')
+  revalidateAll(slug)
 }

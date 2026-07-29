@@ -1,22 +1,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { prisma } from '@/lib/prisma'
+import { getPublishedPosts } from '@/lib/posts'
 import { siteConfig } from '@/lib/site'
 import { formatDate } from '@/lib/format'
 
 export default async function HomePage() {
-  const posts = await prisma.post.findMany({
-    where: { published: true },
-    orderBy: { publishedAt: 'desc' },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      excerpt: true,
-      coverImage: true,
-      publishedAt: true,
-    },
-  })
+  const posts = await getPublishedPosts()
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-14">
@@ -33,7 +22,7 @@ export default async function HomePage() {
       ) : (
         <ul className="space-y-9">
           {posts.map((post) => (
-            <li key={post.id}>
+            <li key={post.slug}>
               <p className="mb-1 text-sm text-muted">{formatDate(post.publishedAt)}</p>
               <h2 className="text-xl font-semibold tracking-tight">
                 <Link href={`/posts/${post.slug}`} className="hover:text-accent">
