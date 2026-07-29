@@ -53,9 +53,19 @@ Either route works — the browser one installs nothing.
 1. Sign up at [turso.tech](https://turso.tech) and create a database (free tier is plenty).
 2. On the database page, copy the **URL** (`libsql://…`) and create a **token**. These
    become `DATABASE_URL` and `DATABASE_AUTH_TOKEN`.
-3. Open the database's **SQL shell** in the dashboard, paste the contents of
-   [`deploy/schema.sql`](deploy/schema.sql), and run it. That file is the full schema,
-   pre-generated so you don't need Prisma installed to produce it.
+3. Apply the schema. With the URL and token in your environment:
+
+   ```bash
+   npm run db:push
+   ```
+
+   That runs [`deploy/schema.sql`](deploy/schema.sql) against whatever `DATABASE_URL`
+   points at, prints the host it targeted, and refuses to touch a database that already
+   has tables. You can also paste the file into the dashboard's SQL shell by hand.
+
+**Skipping this step is the most common mistake.** Without it, the next command fails
+with `no such table: main.User`, and the first Vercel build fails with
+`no such table: main.Post`.
 
 ### With the CLI
 
@@ -129,6 +139,15 @@ On PowerShell, set the variables first with `$env:DATABASE_URL='…'` and then r
 `--admin-only` deliberately skips the sample posts, which reference example images that
 only exist on a local disk. Sign in at `https://<your-app>.vercel.app/admin` and write
 your first post there.
+
+The seed refuses to write the development default password (`changeme123`) into a remote
+database, since that value is published in this repo. Set `ADMIN_PASSWORD` to something
+private or the command stops without touching anything.
+
+> **Keep `.env` pointed at your local database.** If you put the hosted URL in `.env`,
+> every local `npm run dev` reads and writes production, and `npm run db:seed` would
+> overwrite live content with sample posts. Pass production values inline for one-off
+> commands instead, as above.
 
 ---
 

@@ -12,6 +12,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:admin": "tsx prisma/seed.ts --admin-only",
     "db:sql": "prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script --output deploy/schema.sql",
+    "db:push": "tsx prisma/apply-schema.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {
