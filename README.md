@@ -47,6 +47,8 @@ Edit `ADMIN_PASSWORD` in `.env`, then re-run `npm run db:seed` — the seed upse
 | `npm run build` / `npm start` | Production build and serve |
 | `npm run db:migrate` | Apply schema migrations |
 | `npm run db:seed` | Create/update the admin user, sample posts, and example images |
+| `npm run db:seed:admin` | Create/update only the admin user — for seeding a deployed database |
+| `npm run db:sql` | Regenerate `deploy/schema.sql` after a schema change |
 | `npm run db:studio` | Browse the database in Prisma Studio |
 
 ## How it works

@@ -58,14 +58,19 @@ turso db show notes-blog --url && turso db tokens create notes-blog
 ```
 
 ```bash
-npm run db:sql | turso db shell notes-blog
+turso db shell notes-blog < deploy/schema.sql
 ```
 
-`deploy/schema.sql` is checked in for convenience. Regenerate it after any schema change:
+`deploy/schema.sql` is checked in and current, so nothing needs regenerating to deploy.
+Only after editing `prisma/schema.prisma`, refresh it with:
 
 ```bash
-npm run db:sql > deploy/schema.sql
+npm run db:sql
 ```
+
+That writes `deploy/schema.sql` in place. It uses Prisma's `--output` flag rather than
+shell redirection, because redirecting `npm run` also captures npm's own header lines and
+would leave invalid SQL at the top of the file.
 
 ## 3. Create the blob store
 

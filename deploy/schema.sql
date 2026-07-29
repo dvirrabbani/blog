@@ -31,4 +31,3 @@ CREATE UNIQUE INDEX "Post_slug_key" ON "Post"("slug");
 
 -- CreateIndex
 CREATE INDEX "Post_published_publishedAt_idx" ON "Post"("published", "publishedAt");
-
