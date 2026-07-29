@@ -32,7 +32,18 @@ before pushing if you want to be certain.
 
 ## 2. Create the database
 
-Install the Turso CLI and sign in (free tier is enough):
+Either route works — the browser one installs nothing.
+
+### Browser only (no CLI)
+
+1. Sign up at [turso.tech](https://turso.tech) and create a database (free tier is plenty).
+2. On the database page, copy the **URL** (`libsql://…`) and create a **token**. These
+   become `DATABASE_URL` and `DATABASE_AUTH_TOKEN`.
+3. Open the database's **SQL shell** in the dashboard, paste the contents of
+   [`deploy/schema.sql`](deploy/schema.sql), and run it. That file is the full schema,
+   pre-generated so you don't need Prisma installed to produce it.
+
+### With the CLI
 
 ```bash
 turso auth login
@@ -42,21 +53,18 @@ turso auth login
 turso db create notes-blog
 ```
 
-Get the two values you'll need:
-
 ```bash
-turso db show notes-blog --url
+turso db show notes-blog --url && turso db tokens create notes-blog
 ```
-
-```bash
-turso db tokens create notes-blog
-```
-
-Apply the schema. `db:sql` prints the full DDL from `prisma/schema.prisma`, which you
-pipe straight into the database shell:
 
 ```bash
 npm run db:sql | turso db shell notes-blog
+```
+
+`deploy/schema.sql` is checked in for convenience. Regenerate it after any schema change:
+
+```bash
+npm run db:sql > deploy/schema.sql
 ```
 
 ## 3. Create the blob store
@@ -68,10 +76,11 @@ this variable automatically.
 ## 4. Generate a session secret
 
 ```bash
-openssl rand -base64 32
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
-Do not reuse the local development value.
+Do not reuse the local development value. The app refuses to start in production
+without this, rather than signing sessions with an empty key.
 
 ## 5. Import the project into Vercel
 
