@@ -5,21 +5,32 @@ import { cookies } from 'next/headers'
 const COOKIE_NAME = 'session'
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 
-const secret = process.env.SESSION_SECRET
+/**
+ * Read at call time, not module scope. SESSION_SECRET is runtime configuration, and
+ * reading it while modules evaluate makes the *build* fail when it is absent — which
+ * blocks deploying the public blog over a variable only the admin routes need.
+ *
+ * Without a secret, tokens would be signed with an empty key and anyone could forge a
+ * session, so production still refuses — just at the point of use rather than at import.
+ */
+function signingKey() {
+  const secret = process.env.SESSION_SECRET
 
-// Without a secret, tokens would be signed with an empty key and anyone could
-// forge a session. Fail at startup in production rather than silently allowing it.
-if (!secret && process.env.NODE_ENV === 'production') {
-  throw new Error(
-    'SESSION_SECRET is not set.\n' +
-      'Generate one:  node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"\n' +
-      'Then add it to your host\'s environment variables. On Vercel, make sure it is\n' +
-      'enabled for the environment being built — a variable scoped to Production only\n' +
-      'is absent from Preview builds, which fails the build exactly like this.',
-  )
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'SESSION_SECRET is not set.\n' +
+          'Generate one:  node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"\n' +
+          "Then add it in your host's environment variable settings — not in a .env file,\n" +
+          'which is gitignored and never uploaded. On Vercel, tick every environment it\n' +
+          'should apply to; a variable scoped to Production only is absent from Previews.',
+      )
+    }
+    return new TextEncoder().encode('insecure-development-only-secret')
+  }
+
+  return new TextEncoder().encode(secret)
 }
-
-const encodedKey = new TextEncoder().encode(secret ?? 'insecure-development-only-secret')
 
 export type SessionPayload = { userId: string }
 
@@ -29,7 +40,7 @@ export async function createSession(userId: string) {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(expiresAt)
-    .sign(encodedKey)
+    .sign(signingKey())
 
   const cookieStore = await cookies()
   cookieStore.set(COOKIE_NAME, token, {
@@ -51,7 +62,7 @@ export async function getSession(): Promise<SessionPayload | null> {
   if (!token) return null
 
   try {
-    const { payload } = await jwtVerify<SessionPayload>(token, encodedKey, {
+    const { payload } = await jwtVerify<SessionPayload>(token, signingKey(), {
       algorithms: ['HS256'],
     })
     return { userId: payload.userId }
