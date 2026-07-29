@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# sqlite
+*.db
+*.db-journal
+
+# Uploaded images (keep the folder, ignore the contents)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# Prisma vendors AI-assistant skill docs on init; regenerated, not source
+/.agents/
+/.claude/skills/
+/.windsurf/
+/skills-lock.json
