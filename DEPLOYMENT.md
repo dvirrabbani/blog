@@ -12,6 +12,20 @@ libSQL protocol as the local file, through the same `@prisma/adapter-libsql` dri
 The upload code picks its backend at runtime: blob storage when `BLOB_READ_WRITE_TOKEN`
 is set, local disk otherwise.
 
+> **Order matters.** Importing a project into Vercel starts a deploy immediately, and
+> the first build will fail unless the database and environment variables already exist.
+> The build needs both:
+>
+> - `SESSION_SECRET`, or the production guard throws and the build stops with
+>   *"Failed to collect page data for /api/upload"*.
+> - A reachable database **with the schema applied**, because the home page is
+>   prerendered and queries `Post` at build time. A missing table fails the build with
+>   *"no such table: main.Post"*. An empty table is fine — it renders "Nothing published
+>   yet."
+>
+> So do steps 2–4 before step 5, and enter the variables on the import screen rather
+> than after the first deploy.
+
 ---
 
 ## 1. Push the code to GitHub
