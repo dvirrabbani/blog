@@ -169,8 +169,19 @@ runtime — the app fell back to disk, and the file will vanish on the next depl
 purpose and rebuilt by the `postinstall` script. If it's missing, confirm `postinstall`
 survived in `package.json`.
 
-**`SESSION_SECRET is not set`** — the app refuses to boot in production without it,
-rather than signing sessions with an empty key. Add the variable and redeploy.
+**`SESSION_SECRET is not set` / `Failed to collect page data for /api/upload`** — these
+are the same failure. The app refuses to build or boot in production without a secret,
+rather than signing sessions with an empty key. Three things to check, in order:
+
+1. **Is the variable scoped to the environment being built?** Vercel stores variables per
+   environment. One added to *Production* only is missing from *Preview* builds, and any
+   deploy from a branch that isn't your production branch is a Preview. Tick
+   Production, Preview, and Development unless you have a reason not to.
+2. **Is your production branch the branch you pushed?** Under *Settings → Git*, the
+   Production Branch defaults to `main`. This repo uses `master`, so either change that
+   setting or your pushes build as Previews.
+3. **Did you redeploy after adding it?** Vercel does not rebuild on an environment
+   change. Use *Deployments → ⋯ → Redeploy* on the failed deploy.
 
 **Cover images save as blank** — the server only accepts image URLs it produced: a
 `/uploads/…` path or an `https` URL on `*.public.blob.vercel-storage.com`. A cover from

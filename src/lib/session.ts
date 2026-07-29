@@ -11,7 +11,11 @@ const secret = process.env.SESSION_SECRET
 // forge a session. Fail at startup in production rather than silently allowing it.
 if (!secret && process.env.NODE_ENV === 'production') {
   throw new Error(
-    'SESSION_SECRET is not set. Generate one with `openssl rand -base64 32` and add it to the environment.',
+    'SESSION_SECRET is not set.\n' +
+      'Generate one:  node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"\n' +
+      'Then add it to your host\'s environment variables. On Vercel, make sure it is\n' +
+      'enabled for the environment being built — a variable scoped to Production only\n' +
+      'is absent from Preview builds, which fails the build exactly like this.',
   )
 }
 
